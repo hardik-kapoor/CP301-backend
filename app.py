@@ -1,9 +1,10 @@
 from flask import Flask,request,jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.ext.automap import automap_base
+from key import key
 
 app=Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://lzlfnbkgtjnrtk:ed4a038530d897e4fabe8810580787d371f00dec2fee9c707b11e9fdbfb2704b@ec2-54-209-221-231.compute-1.amazonaws.com/d56ehg9cnhk4l8'
+app.config['SQLALCHEMY_DATABASE_URI'] = key
 db=SQLAlchemy(app)
 
 Base = automap_base()
