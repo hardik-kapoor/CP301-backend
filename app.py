@@ -20,16 +20,6 @@ def after_request(response):
   response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
   return response
 
-@app.route('/')
-def index():
-    return "<h1>hello</h1>"
-
-@app.route('/check')
-def check():
-    res=db.session.query(Accounts).where()
-    print(res)
-    return ""
-
 @app.route('/add_user',methods=['POST'])
 def add_user():
     data=request.get_json()
