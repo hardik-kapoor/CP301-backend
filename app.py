@@ -2,8 +2,10 @@ from flask import Flask,request,jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.ext.automap import automap_base
 from key import key
+import hashlib
 
 app=Flask(__name__)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = key
 db=SQLAlchemy(app)
 
@@ -39,7 +41,8 @@ def add_user():
     res=db.session.query(Accounts).filter_by(email_id=data['email_id']).first()
     if res is not None:
         return jsonify({'email_id':'exists'})
-    addAcc=Accounts(username=data['username'],email_id=data['email_id'],password=data['password'])
+    pas=hashlib.sha256(data['password'].encode())
+    addAcc=Accounts(username=data['username'],email_id=data['email_id'],password=pas.hexdigest())
     db.session.add(addAcc)
     db.session.commit()
     return jsonify({'userId':addAcc.id_user})
@@ -50,7 +53,8 @@ def login():
     res=db.session.query(Accounts).filter_by(email_id=data['email_id']).first()
     if res is None:
         return jsonify({'email_id':'does not exist'})
-    if res.password != data['password']:
+    pas=hashlib.sha256(data['password'].encode())
+    if res.password != pas.hexdigest():
         return jsonify({'password':'does not match'})
     return jsonify({'userId':res.id_user})
 
