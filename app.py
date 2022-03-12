@@ -1,4 +1,5 @@
 from flask import Flask,request,jsonify
+import json
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.ext.automap import automap_base
 from key import key
@@ -47,6 +48,14 @@ def login():
     if res.password != pas.hexdigest():
         return jsonify({'password':'does not match'})
     return jsonify({'userId':res.id_user})
+
+@app.route('/bookcreate',methods=['POST'])
+def bookcreate():
+    data=request.files['file']
+    print(data)
+    data2=json.loads(request.form.get('data'))
+    print(data2)
+    return 'done'
 
 if __name__=="__main__":
     app.run(debug=True)
