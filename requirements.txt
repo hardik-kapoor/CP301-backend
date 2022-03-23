@@ -1,0 +1,4 @@
+azure_storage==0.37.0
+Flask==2.0.3
+Flask_SQLAlchemy==2.5.1
+SQLAlchemy==1.4.31
