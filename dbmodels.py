@@ -4,7 +4,7 @@ import os
 from db import db
 
 Base = automap_base()
-engine = create_engine(os.getenv('HEROKU_POSTGRES_CONNECTION_STRING'))
+engine = create_engine(os.getenv('POSTGRES_CONNECTION_STRING'))
 Base.prepare(engine, reflect=True)
 Accounts = Base.classes.accounts
 BookDetails = Base.classes.book_details

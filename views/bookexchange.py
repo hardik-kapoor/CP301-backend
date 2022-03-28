@@ -1,5 +1,4 @@
 from flask import request, jsonify, Blueprint
-from sqlalchemy.ext.automap import automap_base
 import json
 from db import db
 from dbmodels import *
@@ -108,12 +107,14 @@ def getBook(id):
 
 @bookExchange.route('/bookdelete/<id>', methods=['DELETE'])
 def deleteBook(id):
+    # curr_book_img = db.session.query(BookImages).filter_by(book_id=id).first()
+    # db.session.delete(curr_book_img)
+    # curr_book_courses = db.session.query(
+    #     RelatedCourses).filter_by(book_id=id).all()
+    # for course in curr_book_courses:
+    #     db.session.delete(course)
     curr_book_img = db.session.query(BookImages).filter_by(book_id=id).first()
-    db.session.delete(curr_book_img)
-    curr_book_courses = db.session.query(
-        RelatedCourses).filter_by(book_id=id).all()
-    for course in curr_book_courses:
-        db.session.delete(course)
+    container_client.delete_blob(curr_book_img.image_name)
     curr_book = db.session.query(BookDetails).filter_by(book_id=id).first()
     db.session.delete(curr_book)
     db.session.commit()
