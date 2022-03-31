@@ -53,27 +53,27 @@ def bookcreate():
 
 @bookExchange.route('/bookexchange', methods=['GET'])
 def getBooks():
-    course=request.args.get("course")
-    dept=request.args.get("dept")
-    if type(dept)==str:
-        dept=dept.split(',')
-    typ=request.args.get("type")
-    if type(typ)==str:
-        typ=typ.split(',')
-    sql=text('SELECT * FROM BookDetails as b,RelatedCourses')
-    if course=='' or course is None:
-        req=db.session.query(BookDetails).join(RelatedCourses,BookDetails.book_id==RelatedCourses.book_id,isouter=True)
-    else:
-        req=db.session.query(BookDetails).join(RelatedCourses,BookDetails.book_id==RelatedCourses.book_id).filter(ilike_op(RelatedCourses.relevant_course_code,course))
-    if dept==[''] or dept is None:
-        pass
-    else:
-        for d in dept:
-            req=req.filter(RelatedCourses.course_department==d)
-    print(req.all())
+    # course=request.args.get("course")
+    # dept=request.args.get("dept")
+    # if type(dept)==str:
+    #     dept=dept.split(',')
+    # typ=request.args.get("type")
+    # if type(typ)==str:
+    #     typ=typ.split(',')
+    # sql=text('SELECT * FROM BookDetails as b,RelatedCourses')
+    # if course=='' or course is None:
+    #     req=db.session.query(BookDetails).join(RelatedCourses,BookDetails.book_id==RelatedCourses.book_id,isouter=True)
+    # else:
+    #     req=db.session.query(BookDetails).join(RelatedCourses,BookDetails.book_id==RelatedCourses.book_id).filter(ilike_op(RelatedCourses.relevant_course_code,course))
+    # if dept==[''] or dept is None:
+    #     pass
+    # else:
+    #     for d in dept:
+    #         req=req.filter(RelatedCourses.course_department==d)
+    # print(req.all())
     ret = []
-    req=req.all()
-    # req = db.session.query(BookDetails).limit(10).all()
+    # req=req.all()
+    req = db.session.query(BookDetails).limit(10).all()
     for book in req:
         print(book.MetaData.keys)
         currBookDetails = {}
