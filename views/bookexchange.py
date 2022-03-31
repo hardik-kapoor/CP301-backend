@@ -3,6 +3,8 @@ import json
 from db import db
 from dbmodels import *
 from azureStorage.images import container_client
+from sqlalchemy.sql.operators import ilike_op
+from sqlalchemy import text
 
 bookExchange = Blueprint('bookExchange', __name__)
 
@@ -51,9 +53,29 @@ def bookcreate():
 
 @bookExchange.route('/bookexchange', methods=['GET'])
 def getBooks():
+    course=request.args.get("course")
+    dept=request.args.get("dept")
+    if type(dept)==str:
+        dept=dept.split(',')
+    typ=request.args.get("type")
+    if type(typ)==str:
+        typ=typ.split(',')
+    sql=text('SELECT * FROM BookDetails as b,RelatedCourses')
+    if course=='' or course is None:
+        req=db.session.query(BookDetails).join(RelatedCourses,BookDetails.book_id==RelatedCourses.book_id,isouter=True)
+    else:
+        req=db.session.query(BookDetails).join(RelatedCourses,BookDetails.book_id==RelatedCourses.book_id).filter(ilike_op(RelatedCourses.relevant_course_code,course))
+    if dept==[''] or dept is None:
+        pass
+    else:
+        for d in dept:
+            req=req.filter(RelatedCourses.course_department==d)
+    print(req.all())
     ret = []
-    req = db.session.query(BookDetails).limit(20).all()
+    req=req.all()
+    # req = db.session.query(BookDetails).limit(10).all()
     for book in req:
+        print(book.MetaData.keys)
         currBookDetails = {}
         currBookDetails['book_id'] = book.book_id
         currBookDetails['user_id'] = book.id_user
@@ -107,12 +129,6 @@ def getBook(id):
 
 @bookExchange.route('/bookdelete/<id>', methods=['DELETE'])
 def deleteBook(id):
-    # curr_book_img = db.session.query(BookImages).filter_by(book_id=id).first()
-    # db.session.delete(curr_book_img)
-    # curr_book_courses = db.session.query(
-    #     RelatedCourses).filter_by(book_id=id).all()
-    # for course in curr_book_courses:
-    #     db.session.delete(course)
     curr_book_img = db.session.query(BookImages).filter_by(book_id=id).first()
     container_client.delete_blob(curr_book_img.image_name)
     curr_book = db.session.query(BookDetails).filter_by(book_id=id).first()
@@ -125,8 +141,6 @@ def deleteBook(id):
 def getbook():
     user_placing_order = request.args.get('user')
     book_id = request.args.get('book')
-    # print(user_id)
-    # print(book_id)
     curr_book = db.session.query(
         BookDetails).filter_by(book_id=book_id).first()
     user_taking_order = curr_book.id_user
