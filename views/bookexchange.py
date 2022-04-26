@@ -53,29 +53,31 @@ def bookcreate():
 
 @bookExchange.route('/bookexchange', methods=['GET'])
 def getBooks():
-    # course=request.args.get("course")
-    # dept=request.args.get("dept")
-    # if type(dept)==str:
-    #     dept=dept.split(',')
-    # typ=request.args.get("type")
-    # if type(typ)==str:
-    #     typ=typ.split(',')
-    # sql=text('SELECT * FROM BookDetails as b,RelatedCourses')
-    # if course=='' or course is None:
-    #     req=db.session.query(BookDetails).join(RelatedCourses,BookDetails.book_id==RelatedCourses.book_id,isouter=True)
-    # else:
-    #     req=db.session.query(BookDetails).join(RelatedCourses,BookDetails.book_id==RelatedCourses.book_id).filter(ilike_op(RelatedCourses.relevant_course_code,course))
-    # if dept==[''] or dept is None:
-    #     pass
-    # else:
-    #     for d in dept:
-    #         req=req.filter(RelatedCourses.course_department==d)
-    # print(req.all())
+    course = request.args.get("course")
+    dept = request.args.get("dept")
+    if type(dept) == str:
+        dept = dept.split(',')
+    typ = request.args.get("type")
+    if type(typ) == str:
+        typ = typ.split(',')
+    if course == '' or course is None:
+        req = db.session.query(BookDetails).outerjoin(
+            RelatedCourses, BookDetails.book_id == RelatedCourses.book_id)
+    else:
+        req = db.session.query(BookDetails).join(RelatedCourses, BookDetails.book_id == RelatedCourses.book_id).filter(
+            ilike_op(RelatedCourses.relevant_course_code, course))
+    if dept == [''] or dept is None:
+        pass
+    else:
+        for d in dept:
+            req = req.filter(RelatedCourses.course_department == d)
+    if typ == [''] or typ is None:
+        pass
+    else:
+        for t in typ:
+            req = req.filter(BookDetails.book_type == t)
     ret = []
-    # req=req.all()
-    req = db.session.query(BookDetails).limit(10).all()
     for book in req:
-        print(book.MetaData.keys)
         currBookDetails = {}
         currBookDetails['book_id'] = book.book_id
         currBookDetails['user_id'] = book.id_user
@@ -185,16 +187,53 @@ def orders():
     return jsonify(ret), 201
 
 
+# @bookExchange.route('/lenders', methods=['GET'])
+# def lenders():
+#     user_taking_order = request.args.get('user')
+#     # print(user_taking_order)
+#     orders = db.session.query(PlaceOrder).filter_by(
+#         user_taking_order=user_taking_order).limit(20).all()
+#     ret = []
+#     for order in orders:
+#         book = db.session.query(BookDetails).filter_by(
+#             book_id=order.book_id).first()
+#         currBookDetails = {}
+#         currBookDetails['book_id'] = book.book_id
+#         currBookDetails['user_id'] = book.id_user
+#         currBookDetails['book_name'] = book.book_name
+#         currBookDetails['book_type'] = book.book_type
+#         currBookDetails['book_cost'] = book.book_cost
+#         currBookDetails['description'] = book.book_description
+#         currBookDetails['book_author'] = book.book_author
+#         relatedCourseArr = db.session.query(
+#             RelatedCourses).filter_by(book_id=book.book_id).all()
+#         arr = []
+#         for c in relatedCourseArr:
+#             arr.append({'course_code': c.relevant_course_code,
+#                        'course_name': c.relevant_course_name, 'course_department': c.course_department})
+#         currBookDetails['related_courses'] = arr
+#         img = db.session.query(BookImages).filter_by(
+#             book_id=book.book_id).first()
+#         imgName = img.image_name
+#         blob_client = container_client.get_blob_client(blob=imgName)
+#         currBookDetails['image_link'] = blob_client.url
+#         currBookDetails['user_id']=order.user_placing_order
+#         user=db.session.query(Accounts).filter_by(id_user=order.user_placing_order).first()
+#         currBookDetails['user_username']=user.username
+#         currBookDetails['user_email_id']=user.email_id
+#         ret.append(currBookDetails)
+#     return jsonify(ret), 201
+
 @bookExchange.route('/lenders', methods=['GET'])
 def lenders():
     user_taking_order = request.args.get('user')
-    print(user_taking_order)
-    orders = db.session.query(PlaceOrder).filter_by(
-        user_taking_order=user_taking_order).limit(20).all()
+    # print(user_taking_order)
+    books = db.session.query(BookDetails).filter_by(
+        id_user=user_taking_order).limit(20).all()
     ret = []
-    for order in orders:
-        book = db.session.query(BookDetails).filter_by(
-            book_id=order.book_id).first()
+    for book in books:
+        orders = db.session.query(PlaceOrder).filter_by(
+            user_taking_order=user_taking_order, book_id=book.book_id).all()
         currBookDetails = {}
         currBookDetails['book_id'] = book.book_id
         currBookDetails['user_id'] = book.id_user
@@ -215,5 +254,20 @@ def lenders():
         imgName = img.image_name
         blob_client = container_client.get_blob_client(blob=imgName)
         currBookDetails['image_link'] = blob_client.url
+        currBookDetails['Orders']=[]
+        for order in orders:
+            user=db.session.query(Accounts).filter_by(id_user=order.user_placing_order).first()
+            currBookDetails['Orders'].append({'username':user.username,'email_id':user.email_id,'user_id':user.id_user})
         ret.append(currBookDetails)
-    return jsonify(ret), 201
+    return jsonify(ret),201
+
+
+@bookExchange.route('/orderdelete', methods=['DELETE'])
+def orderDel():
+    user_placing_order = request.args.get('user')
+    book_of_order = request.args.get('bookid')
+    curr_order = db.session.query(PlaceOrder).filter_by(
+        book_id=book_of_order, user_placing_order=user_placing_order).first()
+    db.session.delete(curr_order)
+    db.session.commit()
+    return jsonify({'deleted': book_of_order}), 200
