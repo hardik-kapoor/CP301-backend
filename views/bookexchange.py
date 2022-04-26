@@ -1,3 +1,4 @@
+from locale import currency
 from flask import request, jsonify, Blueprint
 import json
 from db import db
@@ -16,7 +17,7 @@ def bookcreate():
     bookType = data_form['BookType']['value']
 
     addBook = BookDetails(id_user=data_form['userId'], book_name=data_form['BookName'],
-                          book_type=bookType, book_cost=data_form['Cost'], book_author=data_form['BookAuthor'], book_description=data_form['Description'])
+                          book_type=bookType, book_cost=data_form['Cost'], book_author=data_form['BookAuthor'], book_description=data_form['Description'], status='NOT_SOLD')
 
     db.session.add(addBook)
     db.session.commit()
@@ -86,6 +87,7 @@ def getBooks():
         currBookDetails['book_cost'] = book.book_cost
         currBookDetails['description'] = book.book_description
         currBookDetails['book_author'] = book.book_author
+        currBookDetails['status'] = book.status
         relatedCourseArr = db.session.query(
             RelatedCourses).filter_by(book_id=book.book_id).all()
         arr = []
@@ -115,6 +117,7 @@ def getBook(id):
     currBookDetails['book_cost'] = book.book_cost
     currBookDetails['description'] = book.book_description
     currBookDetails['book_author'] = book.book_author
+    currBookDetails['status'] = book.status
     relatedCourseArr = db.session.query(
         RelatedCourses).filter_by(book_id=book.book_id).all()
     arr = []
@@ -147,7 +150,7 @@ def getbook():
         BookDetails).filter_by(book_id=book_id).first()
     user_taking_order = curr_book.id_user
     order = PlaceOrder(user_placing_order=user_placing_order,
-                       book_id=book_id, user_taking_order=user_taking_order)
+                       book_id=book_id, user_taking_order=user_taking_order, status='NOT_CHECKED')
     db.session.add(order)
     db.session.commit()
     return "done", 200
@@ -171,6 +174,7 @@ def orders():
         currBookDetails['book_cost'] = book.book_cost
         currBookDetails['description'] = book.book_description
         currBookDetails['book_author'] = book.book_author
+        currBookDetails['status'] = book.status
         relatedCourseArr = db.session.query(
             RelatedCourses).filter_by(book_id=book.book_id).all()
         arr = []
@@ -183,6 +187,7 @@ def orders():
         imgName = img.image_name
         blob_client = container_client.get_blob_client(blob=imgName)
         currBookDetails['image_link'] = blob_client.url
+        currBookDetails['status'] = order.status
         ret.append(currBookDetails)
     return jsonify(ret), 201
 
@@ -242,6 +247,7 @@ def lenders():
         currBookDetails['book_cost'] = book.book_cost
         currBookDetails['description'] = book.book_description
         currBookDetails['book_author'] = book.book_author
+        currBookDetails['status'] = book.status
         relatedCourseArr = db.session.query(
             RelatedCourses).filter_by(book_id=book.book_id).all()
         arr = []
@@ -254,12 +260,14 @@ def lenders():
         imgName = img.image_name
         blob_client = container_client.get_blob_client(blob=imgName)
         currBookDetails['image_link'] = blob_client.url
-        currBookDetails['Orders']=[]
+        currBookDetails['Orders'] = []
         for order in orders:
-            user=db.session.query(Accounts).filter_by(id_user=order.user_placing_order).first()
-            currBookDetails['Orders'].append({'username':user.username,'email_id':user.email_id,'user_id':user.id_user})
+            user = db.session.query(Accounts).filter_by(
+                id_user=order.user_placing_order).first()
+            currBookDetails['Orders'].append(
+                {'username': user.username, 'email_id': user.email_id, 'user_id': user.id_user, 'status': order.status})
         ret.append(currBookDetails)
-    return jsonify(ret),201
+    return jsonify(ret), 201
 
 
 @bookExchange.route('/orderdelete', methods=['DELETE'])
@@ -271,3 +279,18 @@ def orderDel():
     db.session.delete(curr_order)
     db.session.commit()
     return jsonify({'deleted': book_of_order}), 200
+
+
+@bookExchange.route('orderConfirm', methods=['PUT'])
+def orderConfirm():
+    user_placing_order = request.args.get('user_taking')
+    user_taking_order = request.args.get('user_lending')
+    book_id = request.args.get('book_id')
+    db.session.query(PlaceOrder).filter_by(user_taking_order == user_taking_order, book_id ==
+                                           book_id, user_placing_order != user_placing_order).update({PlaceOrder.status: 'REJECTED'})
+    db.session.query(PlaceOrder).filter_by(user_taking_order == user_taking_order, book_id ==
+                                           book_id, user_placing_order == user_placing_order).update({PlaceOrder.status: 'ACCEPTED'})
+    db.session.query(BookDetails).fitler_by(
+        book_id == book_id).update({BookDetails.status: 'SOLD'})
+    db.session.commit()
+    return 'done', 201
