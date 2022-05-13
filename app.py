@@ -16,7 +16,7 @@ def createApp(config_file="settings.py"):
         response.headers.add('Access-Control-Allow-Headers',
                             'Content-Type,Authorization')
         response.headers.add('Access-Control-Allow-Methods',
-                            'GET,PUT,POST,DELETE,OPTIONS')
+                            'GET,PUT,POST,DELETE,OPTIONS,PATCH')
         return response
 
     app.register_blueprint(auth)

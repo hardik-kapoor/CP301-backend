@@ -1,0 +1,4 @@
+import os
+
+CLOUD_STORAGE_BUCKET = os.environ['CLOUD_STORAGE_BUCKET']
+

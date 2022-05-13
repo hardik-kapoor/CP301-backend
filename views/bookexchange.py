@@ -3,7 +3,7 @@ from flask import request, jsonify, Blueprint
 import json
 from db import db
 from dbmodels import *
-from azureStorage.images import container_client
+from googleStorage.images import bucket
 from sqlalchemy.sql.operators import ilike_op
 from sqlalchemy import text
 
@@ -36,12 +36,16 @@ def bookcreate():
             db.session.add(addRelevantCourse)
 
         try:
-            container_client.upload_blob(bookImageName, image)
+            blob = bucket.blob(bookImageName)
+            blob.upload_from_string(
+                image.read(),
+                content_type=image.content_type
+            )
         except Exception as e:
             print(e)
             print('error')
 
-        bookImage = BookImages(book_id=bookId, image_name=bookImageName)
+        bookImage = BookImages(book_id=bookId, image_name=bookImageName,image_link=blob.public_url)
         db.session.add(bookImage)
         db.session.commit()
     except Exception as e:
@@ -97,9 +101,10 @@ def getBooks():
         currBookDetails['related_courses'] = arr
         img = db.session.query(BookImages).filter_by(
             book_id=book.book_id).first()
-        imgName = img.image_name
-        blob_client = container_client.get_blob_client(blob=imgName)
-        currBookDetails['image_link'] = blob_client.url
+        imgName = img.image_link
+        print(imgName)
+        # blob_client = container_client.get_blob_client(blob=imgName)
+        currBookDetails['image_link'] = imgName
         ret.append(currBookDetails)
     return jsonify(ret), 201
 
@@ -126,16 +131,18 @@ def getBook(id):
                    'course_name': c.relevant_course_name, 'course_department': c.course_department})
     currBookDetails['related_courses'] = arr
     img = db.session.query(BookImages).filter_by(book_id=book.book_id).first()
-    imgName = img.image_name
-    blob_client = container_client.get_blob_client(blob=imgName)
-    currBookDetails['image_link'] = blob_client.url
+    imgName = img.image_link
+    # blob_client = container_client.get_blob_client(blob=imgName)
+    currBookDetails['image_link'] = imgName
     return jsonify(currBookDetails), 201
 
 
 @bookExchange.route('/bookdelete/<id>', methods=['DELETE'])
 def deleteBook(id):
     curr_book_img = db.session.query(BookImages).filter_by(book_id=id).first()
-    container_client.delete_blob(curr_book_img.image_name)
+    # container_client.delete_blob(curr_book_img.image_name)
+    blob=bucket.blob(curr_book_img.image_name)
+    blob.delete()
     curr_book = db.session.query(BookDetails).filter_by(book_id=id).first()
     db.session.delete(curr_book)
     db.session.commit()
@@ -184,9 +191,8 @@ def orders():
         currBookDetails['related_courses'] = arr
         img = db.session.query(BookImages).filter_by(
             book_id=book.book_id).first()
-        imgName = img.image_name
-        blob_client = container_client.get_blob_client(blob=imgName)
-        currBookDetails['image_link'] = blob_client.url
+        imgName = img.image_link
+        currBookDetails['image_link'] = imgName
         currBookDetails['status'] = order.status
         ret.append(currBookDetails)
     return jsonify(ret), 201
@@ -257,9 +263,8 @@ def lenders():
         currBookDetails['related_courses'] = arr
         img = db.session.query(BookImages).filter_by(
             book_id=book.book_id).first()
-        imgName = img.image_name
-        blob_client = container_client.get_blob_client(blob=imgName)
-        currBookDetails['image_link'] = blob_client.url
+        imgName = img.image_link
+        currBookDetails['image_link'] = imgName
         currBookDetails['Orders'] = []
         for order in orders:
             user = db.session.query(Accounts).filter_by(
@@ -281,16 +286,14 @@ def orderDel():
     return jsonify({'deleted': book_of_order}), 200
 
 
-@bookExchange.route('orderConfirm', methods=['PUT'])
-def orderConfirm():
-    user_placing_order = request.args.get('user_taking')
-    user_taking_order = request.args.get('user_lending')
-    book_id = request.args.get('book_id')
-    db.session.query(PlaceOrder).filter_by(user_taking_order == user_taking_order, book_id ==
-                                           book_id, user_placing_order != user_placing_order).update({PlaceOrder.status: 'REJECTED'})
-    db.session.query(PlaceOrder).filter_by(user_taking_order == user_taking_order, book_id ==
-                                           book_id, user_placing_order == user_placing_order).update({PlaceOrder.status: 'ACCEPTED'})
-    db.session.query(BookDetails).fitler_by(
-        book_id == book_id).update({BookDetails.status: 'SOLD'})
+@bookExchange.route('/orderConfirm/<user_placing_order>/<user_taking_order>/<book_id>', methods=['PATCH'])
+def orderConfirm(user_placing_order,user_taking_order,book_id):
+    print(user_placing_order,book_id)
+    db.session.query(PlaceOrder).filter(PlaceOrder.user_taking_order == user_taking_order , PlaceOrder.book_id ==
+                                           book_id , PlaceOrder.user_placing_order != user_placing_order).update({PlaceOrder.status: 'REJECTED'})
+    db.session.query(PlaceOrder).filter(PlaceOrder.user_taking_order == user_taking_order , PlaceOrder.book_id ==
+                                           book_id , PlaceOrder.user_placing_order == user_placing_order).update({PlaceOrder.status: 'ACCEPTED'})
+    db.session.query(BookDetails).filter(
+        BookDetails.book_id == book_id).update({BookDetails.status: 'SOLD'})
     db.session.commit()
     return 'done', 201
