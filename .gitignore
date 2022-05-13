@@ -1,3 +1,5 @@
 .env
 .flaskenv
 cp-301-340309-f2d1aa0562d7.json
+venv
+__pycache__
