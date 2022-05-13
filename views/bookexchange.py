@@ -26,7 +26,6 @@ def bookcreate():
     try:
         bookImageName = "book_"+str(data_form['userId'])+"_"+str(bookId)+'.jpg'
         for i in range(1, data_form['numCourses']+1):
-            print(i)
             str_code = "course_code_"+str(i)
             str_dept = "course_dept_"+str(i)
             str_name = "course_name_"+str(i)
@@ -102,7 +101,6 @@ def getBooks():
         img = db.session.query(BookImages).filter_by(
             book_id=book.book_id).first()
         imgName = img.image_link
-        print(imgName)
         # blob_client = container_client.get_blob_client(blob=imgName)
         currBookDetails['image_link'] = imgName
         ret.append(currBookDetails)
@@ -112,7 +110,6 @@ def getBooks():
 @bookExchange.route('/bookexchange/<id>', methods=['GET'])
 def getBook(id):
     book = db.session.query(BookDetails).filter_by(book_id=id).first()
-    print(book)
     currBookDetails = {}
     currBookDetails = {}
     currBookDetails['book_id'] = book.book_id
@@ -166,7 +163,6 @@ def getbook():
 @bookExchange.route('/orders', methods=['GET'])
 def orders():
     user_placing_order = request.args.get('user')
-    print(user_placing_order)
     orders = db.session.query(PlaceOrder).filter_by(
         user_placing_order=user_placing_order).limit(20).all()
     ret = []
@@ -197,43 +193,6 @@ def orders():
         ret.append(currBookDetails)
     return jsonify(ret), 201
 
-
-# @bookExchange.route('/lenders', methods=['GET'])
-# def lenders():
-#     user_taking_order = request.args.get('user')
-#     # print(user_taking_order)
-#     orders = db.session.query(PlaceOrder).filter_by(
-#         user_taking_order=user_taking_order).limit(20).all()
-#     ret = []
-#     for order in orders:
-#         book = db.session.query(BookDetails).filter_by(
-#             book_id=order.book_id).first()
-#         currBookDetails = {}
-#         currBookDetails['book_id'] = book.book_id
-#         currBookDetails['user_id'] = book.id_user
-#         currBookDetails['book_name'] = book.book_name
-#         currBookDetails['book_type'] = book.book_type
-#         currBookDetails['book_cost'] = book.book_cost
-#         currBookDetails['description'] = book.book_description
-#         currBookDetails['book_author'] = book.book_author
-#         relatedCourseArr = db.session.query(
-#             RelatedCourses).filter_by(book_id=book.book_id).all()
-#         arr = []
-#         for c in relatedCourseArr:
-#             arr.append({'course_code': c.relevant_course_code,
-#                        'course_name': c.relevant_course_name, 'course_department': c.course_department})
-#         currBookDetails['related_courses'] = arr
-#         img = db.session.query(BookImages).filter_by(
-#             book_id=book.book_id).first()
-#         imgName = img.image_name
-#         blob_client = container_client.get_blob_client(blob=imgName)
-#         currBookDetails['image_link'] = blob_client.url
-#         currBookDetails['user_id']=order.user_placing_order
-#         user=db.session.query(Accounts).filter_by(id_user=order.user_placing_order).first()
-#         currBookDetails['user_username']=user.username
-#         currBookDetails['user_email_id']=user.email_id
-#         ret.append(currBookDetails)
-#     return jsonify(ret), 201
 
 @bookExchange.route('/lenders', methods=['GET'])
 def lenders():
@@ -288,7 +247,6 @@ def orderDel():
 
 @bookExchange.route('/orderConfirm/<user_placing_order>/<user_taking_order>/<book_id>', methods=['PATCH'])
 def orderConfirm(user_placing_order,user_taking_order,book_id):
-    print(user_placing_order,book_id)
     db.session.query(PlaceOrder).filter(PlaceOrder.user_taking_order == user_taking_order , PlaceOrder.book_id ==
                                            book_id , PlaceOrder.user_placing_order != user_placing_order).update({PlaceOrder.status: 'REJECTED'})
     db.session.query(PlaceOrder).filter(PlaceOrder.user_taking_order == user_taking_order , PlaceOrder.book_id ==
@@ -297,3 +255,31 @@ def orderConfirm(user_placing_order,user_taking_order,book_id):
         BookDetails.book_id == book_id).update({BookDetails.status: 'SOLD'})
     db.session.commit()
     return 'done', 201
+
+@bookExchange.route('/accounts',methods=['GET'])
+def userDetails():
+    id=request.args.get("user_id")
+    out=db.session.query(AccountDetails).filter_by(id_user=id).first()
+    if out is not None:
+        det={}
+        det['id_user']=out.id_user
+        det['roll_no']=out.roll_no
+        det['room_no']=out.room_no
+        det['hostel_name']=out.hostel_name
+        det['name']=out.name
+        det['phone_number']=out.phone_number
+        return jsonify(det),201
+    else:
+        return 'none',201
+
+
+@bookExchange.route('/accountdetailspost',methods=['POST'])
+def postaccountdetails():
+    data_form = json.loads(request.form.get('data'))
+    # print(data_form)
+    addAcc=AccountDetails(id_user=data_form['user_id'],name=data_form['name'],roll_no=data_form['roll_no']
+    ,hostel_name=data_form['hostel_name'],room_no=data_form['room_no'],phone_number=data_form['phone_number'])
+    db.session.add(addAcc)
+    db.session.commit()
+    return 'done',201
+

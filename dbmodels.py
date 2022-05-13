@@ -11,3 +11,4 @@ BookDetails = Base.classes.book_details
 RelatedCourses = Base.classes.related_courses
 BookImages = Base.classes.book_images
 PlaceOrder = Base.classes.place_order
+AccountDetails = Base.classes.account_details
