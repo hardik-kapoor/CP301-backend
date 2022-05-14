@@ -178,6 +178,12 @@ def orders():
         currBookDetails['description'] = book.book_description
         currBookDetails['book_author'] = book.book_author
         currBookDetails['status'] = book.status
+        if order.status=='ACCEPTED':
+            user=db.session.query(AccountDetails).filter_by(id_user=order.user_taking_order).first()
+            currBookDetails['name']=user.name
+            currBookDetails['room_no']=user.room_no
+            currBookDetails['hostel_name']=user.hostel_name
+            currBookDetails['phone_no']=user.phone_number
         relatedCourseArr = db.session.query(
             RelatedCourses).filter_by(book_id=book.book_id).all()
         arr = []
